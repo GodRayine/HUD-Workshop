@@ -1,0 +1,8 @@
+# DRAFT ONLY: choose the verified public1.1 commit after owner approval.
+# Place in testing/live/HudEditor/manifest.toml alongside images/icon.png.
+[plugin]
+repository = "https://github.com/GodRayine/HUD-Workshop.git"
+commit = "REPLACE_WITH_VERIFIED_PUBLIC_40_CHARACTER_COMMIT"
+owners = ["GodRayine"]
+project_path = "plugin"
+changelog = "Initial testing submission: HUD layout editing, snapping and layout sharing."

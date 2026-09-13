@@ -10,7 +10,8 @@ foreach ($taskValue in @($PackageUrl, $ProjectUrl)) {
     if (-not [Uri]::TryCreate($taskValue, [UriKind]::Absolute, [ref]$taskUri) -or $taskUri.Scheme -ne 'https' -or $taskUri.UserInfo -or $taskUri.IsLoopback) { throw 'Use a public HTTPS URL without embedded credentials.' }
 }
 $taskEntry = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
-if ($taskEntry.InternalName -ne 'HudEditor' -or $taskEntry.AssemblyVersion -ne '1.0.0.0') { throw 'Unexpected manifest' }
+$taskCatalogVersion = $null
+if ($taskEntry.InternalName -ne 'HudEditor' -or $taskEntry.DalamudApiLevel -ne 15 -or -not [version]::TryParse([string]$taskEntry.AssemblyVersion, [ref]$taskCatalogVersion)) { throw 'Unexpected manifest' }
 $taskEntry | Add-Member RepoUrl $ProjectUrl -Force
 $taskEntry | Add-Member DownloadLinkInstall $PackageUrl -Force
 $taskEntry | Add-Member DownloadLinkUpdate $PackageUrl -Force

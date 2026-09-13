@@ -1,46 +1,10 @@
-# HUD Workshop
+# Release procedure / Порядок выпуска
 
-Редактор HUD для FFXIV / Dalamud: сетка и привязки, групповые операции, свойства элементов, отмена/повтор и обмен раскладками строкой. Интерфейс на русском языке.
+1. Complete the pending in-game checks in `review/TEST-MATRIX.md`; record the exact build and result. / Завершить игровые проверки и записать сборку и результат.
+2. Build and run `package-release.ps1` from PowerShell 7 with the pinned SDK and Dalamud references. It derives filenames from `plugin/HudEditor.csproj`. / Собрать комплект с зафиксированными зависимостями; версия берётся из проекта.
+3. Inspect the plugin/source archives and `SHA256SUMS.txt`. Keep matching source available under GPL-3.0-only. / Проверить архивы и хеши, предоставить соответствующие исходники по GPL-3.0-only.
+4. Publication requires the owner's separate instruction. Upload the matching source commit and release archives only then. / Публикация — только по отдельному указанию владельца.
+5. After verifying anonymous HTTPS downloads, generate a catalog with `make-repository.ps1 -PackageUrl <ZIP HTTPS URL> -ProjectUrl <repository HTTPS URL> -ManifestPath <built HudEditor.json> -OutputPath <new catalog path>`. Verify it before replacing `repo.json`. / Проверить анонимные загрузки, создать и проверить новый каталог перед заменой старого.
+6. Verify clean installation/update. For official testing submission use the draft manifest and `images/icon.png`, with a verified public source commit. / Проверить установку и обновление; для официальной заявки использовать проверенный публичный коммит и иконку.
 
-## Установка
-
-Требуется **Dalamud 15.0.3.4 / API 15**, версия игры **2026.09.01.0000.0000**, Windows. Другие версии не поддерживаются этой сборкой. Penumbra не требуется.
-
-В `/xlsettings` → Experimental → Custom Plugin Repositories добавьте:
-
-```text
-https://raw.githubusercontent.com/GodRayine/HUD-Workshop/main/repo.json
-```
-
-Затем откройте `/xlplugins`, обновите каталог и установите **HUD Workshop**. Команда открытия: `/hudworkshop`. Если использовали dev-сборку, сначала сохраните HUD, выключите её и удалите её запись из Dev Plugin Locations. Не удаляйте настройки HudEditor и не запускайте две копии одновременно.
-
-[Скачать релиз 1.0.0](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.0.0).
-
-## Возможности
-
-- Перемещение, сетка, приклеивание и выравнивание панелей.
-- Группы, выделение рамкой, равные интервалы.
-- Масштаб, форма обычных панелей, включение/выключение.
-- Редактирование скрытых элементов и вынесенных вкладок чата.
-- Строки HUDW1 для обмена поддерживаемыми свойствами раскладки, с предпросмотром и отменой импорта.
-
-Shift+клик меняет выделение, Alt временно отключает привязки. Сохранить HUD применяет изменения; закрытие окна отменяет несохранённый предпросмотр.
-
-## Статус и ограничения
-
-Сборка и 63 автоматические проверки прошли. Проверены в игре основные операции, обычные панели, паладин, цель и чат. Все остальные классы и специальные режимы не проходили полную проверку. Цикл импорта через UI, установка и обновление через каталог пока не проверены в игре.
-
-При полностью скрытых статусах до первого наблюдения предполагается раздельный режим. Выключение чата действует пока плагин загружен. Строка не переносит группы, назначения способностей и переключатели общей/раздельной цели/статусов. Крестовые панели не поддерживаются. Плагин отказывается загружаться с несовместимой версией Dalamud; снятие ограничения вручную не обеспечивает совместимость.
-
-## Сборка
-
-.NET SDK 10.0.100, PowerShell7 и библиотеки Dalamud15.0.3.4:
-
-```powershell
-./build.ps1 -DotnetPath 'C:/path/to/dotnet.exe' -DalamudPath 'C:/path/to/Hooks/15.0.3.4'
-./package-release.ps1 -DotnetPath 'C:/path/to/dotnet.exe' -DalamudPath 'C:/path/to/Hooks/15.0.3.4'
-```
-
-Релизный комплект создаётся в release/1.0.0. Для следующей версии нужно обновить version и проверки/пути релизных скриптов. При обновлении игры нужна отдельная проверка нативных структур.
-
-Разработка выполнена с использованием AI-инструментов. Проект распространяется через сторонний каталог и не является официальным плагином Dalamud. Публичная лицензия пока не назначена.
+The checked-in `repo.json` intentionally points to published 1.0.0 until a later release is authorized. The local 1.1 kit is a review candidate, not proof of acceptance. / Текущий `repo.json` намеренно указывает на опубликованную 1.0.0. Локальный комплект 1.1 предназначен для ревью.

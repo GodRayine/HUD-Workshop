@@ -30,12 +30,14 @@ public sealed partial class Plugin : IDalamudPlugin
         var version = typeof(IDalamudPlugin).Assembly.GetName().Version?.ToString();
         if (version != "15.0.3.4")
             throw new NotSupportedException($"HUD Workshop требует Dalamud 15.0.3.4; установлена {version}. Нужна совместимая сборка плагина.");
+        editorWindow = new InspectorWindow(this);
+        windowSystem.AddWindow(editorWindow);
         Commands.AddHandler("/hudworkshop", new CommandInfo(OnCommand) { HelpMessage = "Открыть редактор элементов HUD Workshop." });
         PluginInterface.UiBuilder.Draw += ApplyChatVisibility;
         PluginInterface.UiBuilder.Draw += DrawEditor;
         PluginInterface.UiBuilder.OpenMainUi += OpenEditor;
         PluginInterface.UiBuilder.OpenConfigUi += OpenEditor;
-        Log.Information("HUD Workshop 1.0.0 loaded. Open with /hudworkshop.");
+        Log.Information("HUD Workshop 1.1.0 review build loaded. Open with /hudworkshop.");
     }
     private void OnCommand(string command, string args) { if (editorOpen) CloseEditor(); else OpenEditor(); }
     public void Dispose()
@@ -45,6 +47,7 @@ public sealed partial class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi -= OpenEditor;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenEditor;
         Commands.RemoveHandler("/hudworkshop");
+        windowSystem.RemoveAllWindows();
         Framework.RunOnFrameworkThread(() =>
         {
             if(baseline != null)CloseEditor();

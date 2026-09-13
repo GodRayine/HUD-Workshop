@@ -67,7 +67,6 @@ public sealed partial class Plugin
             Scalar(ImGuiStyleVar.WindowBorderSize, 1);
             Scalar(ImGuiStyleVar.FrameBorderSize, 0);
             Vector(ImGuiStyleVar.WindowPadding, new(18, 16));
-            Vector(ImGuiStyleVar.FramePadding, new(10, 6));
             Vector(ImGuiStyleVar.ItemSpacing, new(10, 9));
         }
         public void Dispose() { ImGui.PopStyleVar(variables); ImGui.PopStyleColor(colors); }

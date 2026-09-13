@@ -75,3 +75,34 @@ using (var bombBuffer = new MemoryStream()) {
  RejectCode(() => LayoutCode.Decode("HUDW1:" + Convert.ToBase64String(bomb) + ":" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bomb))), "Bounded decompression");
 }
 Console.WriteLine($"Passed {count} total checks including layout codes.");
+
+// Failure injection checks the shared transaction boundary without writing game data.
+var transactionOrder = new List<string>();
+SaveTransaction.Run(() => transactionOrder.Add("apply"), () => transactionOrder.Add("persist"), () => transactionOrder.Add("rollback"));
+Check(transactionOrder.SequenceEqual(new[] {"apply", "persist"}), "Success does not roll back");
+foreach (var failDuringPersist in new[] {false, true}) {
+ var memoryValue = 7; var diskValue = 7; var persists = 0;
+ var injected = new IOException("Injected write failure");
+ try {
+  SaveTransaction.Run(() => {memoryValue = 9; if (!failDuringPersist) throw injected;},
+   () => {persists++; diskValue = 9; throw injected;}, () => {memoryValue = 7; diskValue = 7;});
+  throw new Exception("Failure swallowed");
+ } catch (IOException ex) { Check(ReferenceEquals(ex, injected), "Original save failure preserved"); }
+ Check(memoryValue == 7 && diskValue == 7 && persists == (failDuringPersist ? 1 : 0), "Partial application/persistence rolled back");
+}
+var applyFailure = new IOException("apply" ); var restoreFailure = new IOException("restore");
+try { SaveTransaction.Run(() => throw applyFailure, () => throw new Exception("Must not persist"), () => throw restoreFailure); throw new Exception("Failure swallowed"); }
+catch (AggregateException ex) { Check(ex.InnerExceptions.SequenceEqual(new[] {applyFailure, restoreFailure}), "Rollback failure preserves both errors"); }
+Console.WriteLine($"Passed {count} total checks including save failures.");
+
+var recoveryOrder = new List<int>();
+var recoveryErrors = RecoveryBatch.AttemptAll(new Action[] {
+ () => { recoveryOrder.Add(1); throw new IOException("first failure"); },
+ () => recoveryOrder.Add(2),
+ () => { recoveryOrder.Add(3); throw new IOException("second failure"); },
+ () => recoveryOrder.Add(4)
+});
+Check(recoveryOrder.SequenceEqual(new[] {1,2,3,4}), "Recovery continues past failed fields");
+Check(recoveryErrors.Count == 2 && recoveryErrors[0].Message == "first failure" && recoveryErrors[1].Message == "second failure", "Recovery retains every failure");
+Check(RecoveryBatch.AttemptAll(Array.Empty<Action>()).Count == 0, "Empty recovery succeeds");
+Console.WriteLine($"Passed {count} total checks including recovery.");
