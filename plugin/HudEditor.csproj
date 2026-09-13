@@ -1,11 +1,13 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>1.0.0.0</Version>
+    <Version>1.1.0.0</Version>
     <AssemblyName>HudEditor</AssemblyName>
     <Author>HUD Workshop</Author>
     <Name>HUD Workshop</Name>
     <Punchline>Редактор HUD: привязки, группы, свойства и обмен раскладками.</Punchline>
     <Description>Редактируйте HUD прямо в игре: сетка, привязки, групповое перемещение, масштаб, форма панелей и включение элементов. Импорт и экспорт раскладки строкой. Команда /hudworkshop. Поддерживается только Dalamud 15.0.3.4 (API 15).</Description>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <RepoUrl>https://github.com/GodRayine/HUD-Workshop</RepoUrl>
     <Tags>hud;layout;editor</Tags>
     <ApplicableVersion>2026.09.01.0000.0000</ApplicableVersion>
     <AcceptsFeedback>false</AcceptsFeedback>

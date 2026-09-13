@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-  <ItemGroup><Compile Include="../plugin/LayoutGeometry.cs" Link="LayoutGeometry.cs" /><Compile Include="../plugin/ScaleGeometry.cs" Link="ScaleGeometry.cs" /><Compile Include="../plugin/TargetMode.cs" Link="TargetMode.cs" /><Compile Include="../plugin/OfflineGeometry.cs" Link="OfflineGeometry.cs" /><Compile Include="../plugin/LayoutCode.cs" Link="LayoutCode.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../plugin/LayoutGeometry.cs" Link="LayoutGeometry.cs" /><Compile Include="../plugin/ScaleGeometry.cs" Link="ScaleGeometry.cs" /><Compile Include="../plugin/TargetMode.cs" Link="TargetMode.cs" /><Compile Include="../plugin/OfflineGeometry.cs" Link="OfflineGeometry.cs" /><Compile Include="../plugin/LayoutCode.cs" Link="LayoutCode.cs" /><Compile Include="../plugin/SaveTransaction.cs" Link="SaveTransaction.cs" /><Compile Include="../plugin/RecoveryBatch.cs" Link="RecoveryBatch.cs" /></ItemGroup>
 </Project>

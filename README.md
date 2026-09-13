@@ -1,46 +1,60 @@
 # HUD Workshop
 
-Редактор HUD для FFXIV / Dalamud: сетка и привязки, групповые операции, свойства элементов, отмена/повтор и обмен раскладками строкой. Интерфейс на русском языке.
+<img src="images/icon.png" alt="HUD Workshop layout icon" width="96" height="96">
 
-## Установка
+**English** · [Русский](README.ru.md)
 
-Требуется **Dalamud 15.0.3.4 / API 15**, версия игры **2026.09.01.0000.0000**, Windows. Другие версии не поддерживаются этой сборкой. Penumbra не требуется.
+An in-game HUD editor for FFXIV / Dalamud, with snapping, group editing and properties available directly on selection. The plugin UI is currently in Russian; this README is available in both languages. Penumbra is not required.
 
-В `/xlsettings` → Experimental → Custom Plugin Repositories добавьте:
+## Status and compatibility
+
+This branch prepares **1.1.0.0 for review**; it is not a published release or an accepted official Dalamud plugin. The public custom repository still serves [1.0.0](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.0.0).
+
+Requires Windows, **Dalamud 15.0.3.4 (API 15)** and **FFXIV 2026.09.01.0000.0000**. Native structures are version-specific. The plugin refuses to load with another Dalamud version; removing this guard does not establish compatibility.
+
+## Install the published version
+
+In `/xlsettings` → Experimental → Custom Plugin Repositories, add:
 
 ```text
 https://raw.githubusercontent.com/GodRayine/HUD-Workshop/main/repo.json
 ```
 
-Затем откройте `/xlplugins`, обновите каталог и установите **HUD Workshop**. Команда открытия: `/hudworkshop`. Если использовали dev-сборку, сначала сохраните HUD, выключите её и удалите её запись из Dev Plugin Locations. Не удаляйте настройки HudEditor и не запускайте две копии одновременно.
+Open `/xlplugins`, refresh the list and install **HUD Workshop**. Use `/hudworkshop` to open the editor. If migrating from a development build, save the HUD, disable that build and remove its Dev Plugin Locations entry first. Keep the HudEditor configuration and run only one copy.
 
-[Скачать релиз 1.0.0](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.0.0).
+## Features
 
-## Возможности
+- Grid and edge snapping, alignment and equal spacing.
+- Multi-selection, saved groups and group movement.
+- Position, scale, standard hotbar shape and element visibility controls.
+- Placeholders for supported inactive elements; main and detached chat windows.
+- Undo/redo and cancellation of unsaved previews.
+- Layout sharing through a `HUDW1` text code, with validation and preview before saving.
 
-- Перемещение, сетка, приклеивание и выравнивание панелей.
-- Группы, выделение рамкой, равные интервалы.
-- Масштаб, форма обычных панелей, включение/выключение.
-- Редактирование скрытых элементов и вынесенных вкладок чата.
-- Строки HUDW1 для обмена поддерживаемыми свойствами раскладки, с предпросмотром и отменой импорта.
+Select an element to edit its properties. **Shift + click** changes the selection; **Alt** temporarily disables snapping. **Сохранить HUD** saves the layout. Closing the inspector cancels unsaved edits. Escape is intended to cancel an active drag first, otherwise close the inspector; the drag-specific behavior still needs final in-game verification.
 
-Shift+клик меняет выделение, Alt временно отключает привязки. Сохранить HUD применяет изменения; закрытие окна отменяет несохранённый предпросмотр.
+Layout codes transfer supported positions, scales, visibility and semantic shape settings. They do not include chat messages, character identifiers, action assignments, editor groups or combined/split target and status mode preferences. Unsupported elements are skipped. Optional resolution adaptation adjusts positions, not scale.
 
-## Статус и ограничения
+## Limitations and validation
 
-Сборка и 63 автоматические проверки прошли. Проверены в игре основные операции, обычные панели, паладин, цель и чат. Все остальные классы и специальные режимы не проходили полную проверку. Цикл импорта через UI, установка и обновление через каталог пока не проверены в игре.
+Cross hotbars are unsupported. Other jobs and special modes have not received full coverage. When every status element is hidden and the mode has not been observed, split mode is assumed. Chat hiding is maintained while the plugin runs. Editing pauses during combat and transitions.
 
-При полностью скрытых статусах до первого наблюдения предполагается раздельный режим. Выключение чата действует пока плагин загружен. Строка не переносит группы, назначения способностей и переключатели общей/раздельной цели/статусов. Крестовые панели не поддерживаются. Плагин отказывается загружаться с несовместимой версией Dalamud; снятие ограничения вручную не обеспечивает совместимость.
+The 1.1 Release build and **72 automated checks** pass. These cover geometry, layout-code validation and managed save/recovery failure boundaries, not native game persistence. The owner confirmed opening, Escape closing, reopening and the corrected title-bar buttons. Final native save/restart, UI import, lifecycle interruption, partial recovery, and clean install/update checks remain pending. See the [test matrix](review/TEST-MATRIX.md) and [review readiness notes](review/READINESS.md).
 
-## Сборка
+## Build and package
 
-.NET SDK 10.0.100, PowerShell7 и библиотеки Dalamud15.0.3.4:
+Use **.NET SDK 10.0.100**, PowerShell 7 and the matching Dalamud libraries. Dependency versions and the NuGet lockfile are committed.
 
 ```powershell
 ./build.ps1 -DotnetPath 'C:/path/to/dotnet.exe' -DalamudPath 'C:/path/to/Hooks/15.0.3.4'
+dotnet run --project tests/GeometryTests.csproj --configuration Release
 ./package-release.ps1 -DotnetPath 'C:/path/to/dotnet.exe' -DalamudPath 'C:/path/to/Hooks/15.0.3.4'
 ```
 
-Релизный комплект создаётся в release/1.0.0. Для следующей версии нужно обновить version и проверки/пути релизных скриптов. При обновлении игры нужна отдельная проверка нативных структур.
+Packaging restores in locked mode, builds, runs tests, checks manifest/assembly compatibility and verifies ZIP contents and SHA-256 hashes. Output is `release/<version>/`, derived from the project version. The source archive includes both READMEs, licenses and review materials. Packaging does not upload files or change the published catalog. See [release instructions](docs/RELEASE.md).
 
-Разработка выполнена с использованием AI-инструментов. Проект распространяется через сторонний каталог и не является официальным плагином Dalamud. Публичная лицензия пока не назначена.
+## License and development
+
+Plugin source: [GPL-3.0-only](LICENSE). Icon: **CC0**, [Layout Wireframe from SVG Repo](https://www.svgrepo.com/svg/408321/layout-wireframe); see [asset provenance](THIRD-PARTY-NOTICES.md).
+
+An AI coding agent wrote the implementation, tests and most technical decisions. The owner specified requirements and iteratively tested the plugin in game. Independent human source review has not yet been completed; no invented contribution percentages are claimed. The [submission draft](review/SUBMISSION-DRAFT.md) records this disclosure and remaining review work.

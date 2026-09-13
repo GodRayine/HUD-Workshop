@@ -3,7 +3,10 @@ param(
     [string]$DalamudPath
 )
 $ErrorActionPreference = 'Stop'
-$taskReleaseRoot = Join-Path $PSScriptRoot 'release\1.0.0'
+[xml]$taskProject = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'plugin/HudEditor.csproj') -Raw
+$taskExpectedVersion = [version]$taskProject.Project.PropertyGroup.Version
+$taskReleaseVersion = $taskExpectedVersion.ToString(3)
+$taskReleaseRoot = Join-Path $PSScriptRoot "release/$taskReleaseVersion"
 $taskBuildRoot = Join-Path $taskReleaseRoot 'build'
 New-Item -ItemType Directory -Force -Path $taskReleaseRoot | Out-Null
 & (Join-Path $PSScriptRoot 'build.ps1') -DotnetPath $DotnetPath -DalamudPath $DalamudPath -OutputDirectory $taskBuildRoot
@@ -20,7 +23,7 @@ $taskDll = Join-Path $taskBuildRoot 'HudEditor.dll'
 $taskManifestPath = Join-Path $taskBuildRoot 'HudEditor.json'
 $taskManifest = Get-Content -LiteralPath $taskManifestPath -Raw | ConvertFrom-Json
 $taskVersion = [Reflection.AssemblyName]::GetAssemblyName($taskDll).Version.ToString()
-if ($taskVersion -ne '1.0.0.0' -or $taskManifest.AssemblyVersion -ne $taskVersion -or $taskManifest.InternalName -ne 'HudEditor' -or $taskManifest.DalamudApiLevel -ne 15) { throw 'Assembly/manifest mismatch' }
+if ($taskVersion -ne $taskExpectedVersion.ToString() -or $taskManifest.AssemblyVersion -ne $taskVersion -or $taskManifest.InternalName -ne 'HudEditor' -or $taskManifest.DalamudApiLevel -ne 15) { throw 'Assembly/manifest mismatch' }
 if ($taskManifest.ApplicableVersion -ne '2026.09.01.0000.0000') { throw 'Game version mismatch' }
 Add-Type -AssemblyName System.IO.Compression
 function Write-ReleaseZip([string]$Destination, [hashtable]$Entries) {
@@ -37,7 +40,8 @@ function Write-ReleaseZip([string]$Destination, [hashtable]$Entries) {
 # Explicit allowlist: no backups, diagnostics, user config, runtime DLLs or development paths.
 $taskPayload = @{}
 foreach ($taskName in @('HudEditor.dll', 'HudEditor.json', 'HudEditor.deps.json')) { $taskPayload[$taskName] = Join-Path $taskBuildRoot $taskName }
-$taskPluginZip = Join-Path $taskReleaseRoot 'HudWorkshop-1.0.0.zip'
+foreach ($taskName in @('LICENSE','THIRD-PARTY-NOTICES.md','images/icon.png')) { $taskPayload[$taskName] = Join-Path $PSScriptRoot $taskName }
+$taskPluginZip = Join-Path $taskReleaseRoot "HudWorkshop-$taskReleaseVersion.zip"
 Write-ReleaseZip $taskPluginZip $taskPayload
 $taskCheck = [IO.Compression.ZipFile]::OpenRead($taskPluginZip)
 try {
@@ -53,10 +57,11 @@ $taskSource = @{}
 foreach ($taskFile in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'plugin') -File) {
     if ($taskFile.Extension -in @('.cs', '.csproj') -or $taskFile.Name -eq 'packages.lock.json') { $taskSource['plugin/' + $taskFile.Name] = $taskFile.FullName }
 }
-foreach ($taskName in @('tests/Program.cs','tests/GeometryTests.csproj','build.ps1','package-release.ps1','make-repository.ps1','global.json','docs/RELEASE.md')) { $taskSource[$taskName] = Join-Path $PSScriptRoot $taskName }
-$taskSource['README.md'] = Join-Path $PSScriptRoot 'docs\RELEASE.md'
-Write-ReleaseZip (Join-Path $taskReleaseRoot 'HudWorkshop-1.0.0-source.zip') $taskSource
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\RELEASE.md') -Destination (Join-Path $taskReleaseRoot 'README.md') -Force
+foreach ($taskName in @('tests/Program.cs','tests/GeometryTests.csproj','build.ps1','package-release.ps1','make-repository.ps1','global.json','.gitignore','README.md','README.ru.md','LICENSE','THIRD-PARTY-NOTICES.md','images/icon.svg','images/icon.png','docs/RELEASE.md','review/READINESS.md','review/TEST-MATRIX.md','review/SUBMISSION-DRAFT.md','review/manifest.toml.example')) { $taskSource[$taskName] = Join-Path $PSScriptRoot $taskName }
+
+Write-ReleaseZip (Join-Path $taskReleaseRoot "HudWorkshop-$taskReleaseVersion-source.zip") $taskSource
+foreach ($taskName in @('README.md','README.ru.md','LICENSE','THIRD-PARTY-NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $taskName) -Destination $taskReleaseRoot -Force }
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'images') -Destination $taskReleaseRoot -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'make-repository.ps1') -Destination $taskReleaseRoot -Force
 Copy-Item -LiteralPath $taskManifestPath -Destination $taskReleaseRoot -Force
 $taskTemplate = Get-Content -LiteralPath $taskManifestPath -Raw | ConvertFrom-Json
@@ -65,11 +70,11 @@ $taskTemplate | Add-Member DownloadLinkUpdate 'REPLACE_WITH_PUBLIC_HTTPS_ZIP_URL
 $taskTemplate | Add-Member IsHide $false
 $taskTemplate | Add-Member IsTestingExclusive $false
 ConvertTo-Json -InputObject @($taskTemplate) -Depth 10 | Set-Content -LiteralPath (Join-Path $taskReleaseRoot 'repo.template.json') -Encoding utf8
-$taskDeliverables = @('HudWorkshop-1.0.0.zip','HudWorkshop-1.0.0-source.zip','HudEditor.json','README.md','make-repository.ps1','repo.template.json')
+$taskDeliverables = @("HudWorkshop-$taskReleaseVersion.zip","HudWorkshop-$taskReleaseVersion-source.zip",'HudEditor.json','README.md','README.ru.md','LICENSE','THIRD-PARTY-NOTICES.md','images/icon.svg','images/icon.png','make-repository.ps1','repo.template.json')
 $taskHashes = foreach ($taskName in $taskDeliverables) { '{0}  {1}' -f (Get-FileHash -LiteralPath (Join-Path $taskReleaseRoot $taskName) -Algorithm SHA256).Hash, $taskName }
 $taskHashes | Set-Content -LiteralPath (Join-Path $taskReleaseRoot 'SHA256SUMS.txt') -Encoding ascii
 $taskBundle = @{}
 foreach ($taskName in ($taskDeliverables + 'SHA256SUMS.txt')) { $taskBundle[$taskName] = Join-Path $taskReleaseRoot $taskName }
-Write-ReleaseZip (Join-Path $taskReleaseRoot 'HudWorkshop-1.0.0-release-kit.zip') $taskBundle
+Write-ReleaseZip (Join-Path $taskReleaseRoot "HudWorkshop-$taskReleaseVersion-release-kit.zip") $taskBundle
 Write-Output "Release kit ready: $taskReleaseRoot"
 

@@ -7,6 +7,7 @@ namespace HudWorkshop;
 public sealed partial class Plugin
 {
     private bool editorOpen;
+    private bool cancellationPending;
     private Snapshot? baseline;
     private ulong editorOwner;
     private string selected = "_ActionBar";
@@ -46,37 +47,60 @@ public sealed partial class Plugin
 
     private void CloseEditor()
     {
-        CancelPreview(); baseline = null; editorOpen = false; gesture = null;
+        if (!CancelPreview()) { editorOpen = true; editorWindow.IsOpen = true; return; }
+        baseline = null; editorOpen = false; editorWindow.IsOpen = false; gesture = null;
     }
 
-    private void CancelPreview()
+    private bool CancelPreview()
     {
-        if (baseline == null) return;
+        if (baseline == null) return true;
+        var errors = new List<Exception>();
+        var recovered = new List<string>();
         try
         {
             var now = Read();
             if (PlayerState.ContentId == editorOwner && now.LayoutIndex == baseline.LayoutIndex)
+            {
                 foreach (var (id, expected) in preview)
                 {
                     var actual = now.Bars.First(b => b.Id == id);
                     var original = baseline.Bars.First(b => b.Id == id);
-                    // Each field has independent ownership: an external move must not strand our disabled state.
-                    if(!actual.Ready)continue;
-                    if(previewEnabled.TryGetValue(id,out var expectedEnabled) && actual.Enabled==expectedEnabled)
-                        EnableNative(id,original.Enabled,original.Visible);
-                    if(previewOptions.TryGetValue(id,out var expectedOptions) && OptionsMatch(actual,expectedOptions))
-                        OptionsNative(id,OriginalOptions(original));
-                    if(previewScales.TryGetValue(id,out var expectedScale) && Math.Abs(actual.Scale-expectedScale)<.001f)
-                        ScaleNative(id,original.Scale,false);
-                    if(actual.X==expected.X && actual.Y==expected.Y)
+                    var actions = new List<Action>();
+                    // Offline previews are local; loaded fields are restored only while still owned.
+                    if (actual.Ready)
                     {
-                        MoveNative(id,original.X,original.Y,false);
-                        Log.Information("HUD preview restored {Id}: {X}/{Y}",id,original.X,original.Y);
+                        if (previewEnabled.TryGetValue(id, out var expectedEnabled) && actual.Enabled == expectedEnabled)
+                            actions.Add(() => { EnableNative(id, original.Enabled, original.Visible); previewEnabled.Remove(id); });
+                        if (previewOptions.TryGetValue(id, out var expectedOptions) && OptionsMatch(actual, expectedOptions))
+                            actions.Add(() => { OptionsNative(id, OriginalOptions(original)); previewOptions.Remove(id); });
+                        if (previewScales.TryGetValue(id, out var expectedScale) && Math.Abs(actual.Scale - expectedScale) < .001f)
+                            actions.Add(() => { ScaleNative(id, original.Scale, false); previewScales.Remove(id); });
+                        if (actual.X == expected.X && actual.Y == expected.Y)
+                            actions.Add(() => MoveNative(id, original.X, original.Y, false));
                     }
+                    var failures = RecoveryBatch.AttemptAll(actions);
+                    if (failures.Count == 0) recovered.Add(id);
+                    else errors.AddRange(failures);
                 }
+            }
+            else recovered.AddRange(preview.Keys); // Never write a previous character's session into another.
         }
-        catch (Exception ex) { Log.Error(ex, "Preview cancellation failed"); status = "Не удалось подтвердить отмену: " + ex.Message; }
-        preview.Clear(); previewScales.Clear(); previewOptions.Clear(); previewEnabled.Clear(); lastReady.Clear(); undo.Clear(); redo.Clear(); gesture = null;
+        catch (Exception ex) { errors.Add(ex); }
+        foreach (var id in recovered)
+        {
+            preview.Remove(id); previewScales.Remove(id); previewOptions.Remove(id); previewEnabled.Remove(id);
+        }
+        undo.Clear(); redo.Clear(); gestureStart.Clear(); gesture = null; guideX = guideY = null;
+        if (errors.Count > 0)
+        {
+            cancellationPending = true;
+            Log.Error(new AggregateException(errors), "Preview cancellation incomplete; retaining failed entries");
+            status = "Отмена не завершена. Данные сохранены для повторной попытки: нажмите «Отменить всё».";
+            return false;
+        }
+        lastReady.Clear();
+        cancellationPending = false;
+        return true;
     }
 
     private void SetPreview(string id, Vector2 position)
@@ -114,9 +138,18 @@ public sealed partial class Plugin
         if (!editorOpen) return;
         try
         {
+            if (cancellationPending)
+            {
+                inspectorSnapshot = null;
+                editorWindow.IsOpen = true;
+                using (var recoveryTheme = new WorkshopTheme()) windowSystem.Draw();
+                if (!editorWindow.IsOpen) CloseEditor();
+                return;
+            }
             if (!Available)
             {
-                CancelPreview(); baseline = null;
+                if (!CancelPreview()) return;
+                baseline = null;
                 status = "Редактирование приостановлено: бой, переход или персонаж не загружен.";
             }
             if (baseline == null && Available) OpenEditor();
@@ -124,7 +157,8 @@ public sealed partial class Plugin
             if (current != null && baseline != null && (PlayerState.ContentId != editorOwner || current.LayoutIndex != baseline.LayoutIndex
                 || current.ViewportWidth != baseline.ViewportWidth || current.ViewportHeight != baseline.ViewportHeight))
             {
-                CancelPreview(); baseline = null; current = null;
+                if (!CancelPreview()) return;
+                baseline = null; current = null;
                 status = "Раскладка или размер экрана изменились. Сессия завершена.";
             }
             if (current != null && baseline != null)
@@ -133,7 +167,8 @@ public sealed partial class Plugin
                 if (current.Bars.Any(b => preview.ContainsKey(b.Id) && (!b.Editable
                     || (previewOptions.TryGetValue(b.Id,out var options) ? !OptionsMatch(b,options) : b.SimpleGauge != baseline.Bars.First(o => o.Id == b.Id).SimpleGauge))))
                 {
-                    CancelPreview(); baseline = null; current = null;
+                    if (!CancelPreview()) return;
+                baseline = null; current = null;
                     status = "Редактируемый элемент исчез. Несохранённые изменения отменены.";
                 }
                 else
@@ -149,14 +184,19 @@ public sealed partial class Plugin
                     if (!selection.Contains(selected)) selected = selection.FirstOrDefault() ?? "";
                 }
             }
+            var wasDragging = gesture != null;
             if (current != null) DrawHandles(current);
-            DrawInspector(current);
-            if (!editorOpen) CloseEditor();
+            inspectorSnapshot = current;
+            editorWindow.IsOpen = editorOpen;
+            // Escape cancels an active drag first; otherwise the native closing order applies.
+            editorWindow.RespectCloseHotkey = !wasDragging;
+            using (var theme = new WorkshopTheme()) windowSystem.Draw();
+            if (!editorWindow.IsOpen) CloseEditor();
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Editor operation failed");
-            CancelPreview(); baseline = null; status = "Операция отменена: " + ex.Message;
+            if (CancelPreview()) { baseline = null; status = "Операция отменена: " + ex.Message; }
         }
     }
 
@@ -269,14 +309,16 @@ public sealed partial class Plugin
 
     private void DrawInspector(Snapshot? current)
     {
-        ImGui.SetNextWindowSize(new Vector2(470, 760), ImGuiCond.FirstUseEver);
-        ImGui.SetNextWindowSizeConstraints(new Vector2(440, 540), new Vector2(780, 1400));
-        ImGui.SetNextWindowPos(ImGui.GetMainViewport().Pos + new Vector2(60, 160), ImGuiCond.FirstUseEver);
-        using var theme = new WorkshopTheme();
-        var visible = ImGui.Begin("HUD Workshop###HudWorkshopEditor", ref editorOpen);
-        try
+        if (cancellationPending)
         {
-            if (!visible) return;
+            ImGui.TextWrapped(status);
+            if (ImGui.Button("Повторить отмену") && CancelPreview())
+            {
+                baseline = null;
+                status = "Отмена завершена.";
+            }
+            return;
+        }
             ImGui.TextColored(WorkshopTheme.Accent, "HUD WORKSHOP");
             ImGui.SameLine();
             ImGui.TextDisabled(current == null ? "Приостановлено" : $"Раскладка {current.LayoutIndex + 1}");
@@ -378,12 +420,10 @@ public sealed partial class Plugin
                     status = "HUD сохранён в настройках игры.";
                 }
                 ImGui.SameLine();
-                if (ImGui.Button("Отменить всё", new Vector2(half, 36))) { CancelPreview(); status = "Исходное положение восстановлено."; }
+                if (ImGui.Button("Отменить всё", new Vector2(half, 36)) && CancelPreview()) status = "Исходное положение восстановлено.";
             }
             finally { ImGui.EndDisabled(); }
             ImGui.TextWrapped(status);
             ImGui.TextDisabled("Закрытие окна отменяет несохранённые изменения.");
-        }
-        finally { ImGui.End(); }
     }
 }
