@@ -1,9 +1,9 @@
 [
   {
-    "Author": "HUD Workshop",
+    "Author": "GodRayide",
     "Name": "HUD Workshop",
     "InternalName": "HudEditor",
-    "AssemblyVersion": "1.1.0.0",
+    "AssemblyVersion": "1.1.1.0",
     "Description": "Редактируйте HUD прямо в игре: сетка, привязки, групповое перемещение, масштаб, форма панелей и включение элементов. Импорт и экспорт раскладки строкой. Команда /hudworkshop. Поддерживается только Dalamud 15.0.3.4 (API 15).",
     "ApplicableVersion": "2026.09.01.0000.0000",
     "Tags": [
@@ -19,10 +19,10 @@
     "Punchline": "Редактор HUD: привязки, группы, свойства и обмен раскладками.",
     "AcceptsFeedback": false,
     "RepoUrl": "https://github.com/GodRayine/HUD-Workshop",
-    "DownloadLinkInstall": "https://github.com/GodRayine/HUD-Workshop/releases/download/v1.1.0/HudWorkshop-1.1.0.zip",
-    "DownloadLinkUpdate": "https://github.com/GodRayine/HUD-Workshop/releases/download/v1.1.0/HudWorkshop-1.1.0.zip",
+    "DownloadLinkInstall": "https://github.com/GodRayine/HUD-Workshop/releases/download/v1.1.1/HudWorkshop-1.1.1.zip",
+    "DownloadLinkUpdate": "https://github.com/GodRayine/HUD-Workshop/releases/download/v1.1.1/HudWorkshop-1.1.1.zip",
     "IsHide": false,
     "IsTestingExclusive": false,
-    "LastUpdate": 1789325539
+    "LastUpdate": 1789330732
   }
 ]
