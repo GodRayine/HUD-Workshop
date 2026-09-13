@@ -37,7 +37,7 @@ public sealed partial class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw += DrawEditor;
         PluginInterface.UiBuilder.OpenMainUi += OpenEditor;
         PluginInterface.UiBuilder.OpenConfigUi += OpenEditor;
-        Log.Information("HUD Workshop 1.1.0 review build loaded. Open with /hudworkshop.");
+        Log.Information("HUD Workshop 1.1.1 loaded. Open with /hudworkshop.");
     }
     private void OnCommand(string command, string args) { if (editorOpen) CloseEditor(); else OpenEditor(); }
     public void Dispose()

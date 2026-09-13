@@ -20,7 +20,7 @@ Requires Windows, Dalamud **15.0.3.4 / API 15** and FFXIV **2026.09.01.0000.0000
 3. Open `/xlplugins`, refresh the list and install **HUD Workshop**.
 4. Enter `/hudworkshop` to open the editor.
 
-Install updates through `/xlplugins`. The [1.1 download](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.1.0) is also available on the release page.
+Install updates through `/xlplugins`. The [1.1.1 download](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.1.1) is also available on the release page.
 
 If switching from a development build, save the HUD, disable that build and remove its Dev Plugin Locations entry first. Keep the HudEditor configuration and run only one copy.
 

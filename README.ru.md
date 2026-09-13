@@ -20,7 +20,7 @@
 3. Откройте `/xlplugins`, обновите список и установите **HUD Workshop**.
 4. Введите `/hudworkshop`, чтобы открыть редактор.
 
-Обновления устанавливаются через `/xlplugins`. [Архив версии 1.1](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.1.0) доступен на странице релиза.
+Обновления устанавливаются через `/xlplugins`. [Архив версии 1.1.1](https://github.com/GodRayine/HUD-Workshop/releases/tag/v1.1.1) доступен на странице релиза.
 
 Если использовали dev-сборку, сначала сохраните HUD, отключите её и удалите запись из Dev Plugin Locations. Не удаляйте настройки HudEditor и не запускайте две копии одновременно.
 
